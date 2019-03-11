@@ -1,0 +1,43 @@
+machine:
+  environment:
+    PATH: "${HOME}/bin:${PATH}"
+    S3_BUCKET: terraform-state
+    AWS_DEFAULT_REGION: ap-northeast-1
+    TERRAFORM_VER: 0.9.9
+
+dependencies:
+  cache_directories:
+    - "~/bin"
+  pre:
+    - |
+      mkdir -p ~/bin
+      bash ./ci/terraform-install.sh
+
+test:
+  override:
+    - |
+      #export AWS_ACCESS_KEY_ID="$sonic883b_access_key"
+      #export AWS_SECRET_ACCESS_KEY="$sonic883b_secret_key"
+      #export AWS_DEFAULT_REGION="ap-northeast-1"
+      mkdir ~/.aws/
+      echo "[$sonic883b_aws_profile]" >> ~/.aws/credentials
+      echo "aws_access_key_id = $sonic883b_access_key" >> ~/.aws/credentials
+      echo "aws_secret_access_key = $sonic883b_secret_key" >> ~/.aws/credentials
+      cat ~/.aws/credentials
+      cat ~/.aws/credentials >> /tmp/test_credentials
+
+      cd ~/terraform/sonic883b/controller
+      terraform get
+      terraform init \
+      -backend=true \
+      -backend-config="access_key=$sonic883b_access_key" \
+      -backend-config="secret_key=$sonic883b_secret_key" \
+      -backend-config="region=ap-northeast-1" \
+      -backend-config="bucket=myinfra-terraform-state" \
+      -backend-config="key=terraform.tfstate" 
+
+      terraform plan
+
+deployment:
+  commands:
+    - echo "deployment"
